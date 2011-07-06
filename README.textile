@@ -1,0 +1,19 @@
+TODO: [MED]  Generate service manifests, if just an /etc/init.d script
+TODO: [EASY] Allow naming the service (like 'network/dovecot:imap')
+
+This script turns standardish tarballs directly into Solaris packages.  For
+most packages, simply do this:
+
+  pkgbuild.py foo-1.0.tar.gz
+
+At the moment, I depend on a few things:
+
+  1. The tarball is named NAME-VERSION.tar.EXT.
+  2. The tarball expands to a directory named NAME-VERSION.
+
+Exceptions can be made by subclassing 'Package'.  There are several examples
+of how to do this toward the end of this file.  Look for "CUSTOM".
+
+Also: If, for any package, an SMF manifest file named NAME.xml exists in the
+same directory as the tarball, it will be imported as a service during the
+package's installation scripts (and also properly removed during uninstall).
