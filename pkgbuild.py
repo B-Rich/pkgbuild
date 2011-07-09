@@ -807,7 +807,7 @@ class RubyEnterprise(Package):
         path = os.getcwd()
         try:
             os.chdir('distro')
-            perf = GooglePerftools(app)
+            perf = GooglePerftools(self.app)
             perf.main()
         finally:
             os.chdir(path)
