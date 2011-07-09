@@ -179,64 +179,6 @@ class CommandLineApp(object):
             sys.exit(exit_code)
         return exit_code
 
-    def spawn_and_wait(self, cmd, *args, **kwargs):
-        from subprocess import Popen
-
-        p = Popen((cmd,) + args)
-
-        while True:
-            # Wait a bit before checking on the process
-            if kwargs.has_key('poll'):
-                time.sleep(kwargs['poll'])
-            else:
-                time.sleep(1)
-
-            # Check whether the process aborted entirely for any reason.  If
-            # so, log the fact and then let our outer loop run it again.
-            sts = p.poll()
-            if sts is not None:
-                self.log.info('-- %s exited: %d' % (cmd, sts))
-                return sts
-
-            # The process is still running.  Check whether it is still viable
-            # by calling the given callback.
-            death = False
-            try:
-                if kwargs.has_key('uptest') and \
-                   callable(kwargs['uptest']) and \
-                   not kwargs['uptest'](p):
-                    death = True
-
-            except Exception:
-                self.log.exception('-- %s exception:' % cmd)
-
-            # If the process is no longer viable, we kill it and exit
-            if death is True:
-                try:
-                    import win32api
-                    import win32con
-                    import win32process
-
-                    handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS,
-                                                  True, p.pid)
-                    exitcode = win32process.GetExitCodeProcess(handle)
-                    if exitcode == win32con.STILL_ACTIVE:
-                        win32api.TerminateProcess(handle, 0)
-                        self.log.warning('-- %s killed' % cmd)
-                except:
-                    import signal
-                    try: os.kill(p.pid, signal.SIGHUP)
-                    except: pass
-                    try: os.kill(p.pid, signal.SIGINT)
-                    except: pass
-                    try: os.kill(p.pid, signal.SIGQUIT)
-                    except: pass
-                    try: os.kill(p.pid, signal.SIGKILL)
-                    except: pass
-                    self.log.warning('-- %s killed' % cmd)
-
-                return -1
-
     def mkreader(self, *args, **kwargs):
         self.log.info(str(args))
         kwargs['stdout'] = subprocess.PIPE
@@ -974,25 +916,42 @@ fi
 ''')
 
 ##############################################################################
+
+class Glib(Package):
+    def __init__(self, app, tarball):
+        Package.__init__(self, app, tarball)
+
+    def configure(self):
+        self.app.shell('./configure', '--prefix=/usr', '--sysconfdir=/etc',
+                       '--disable-dtrace', 'LIBS=-lsocket -lnsl')
+
+    def build(self):
+        self.app.shell('make')  # don't use -jN
+
+##############################################################################
 ##############################################################################
 ##############################################################################
 
 class PkgBuild(CommandLineApp):
+    pkgmap = {
+        'apcupsd':         Apcupsd,
+        'db':              BerkeleyDB,
+        'dovecot':         Dovecot,
+        'glib':            Glib,
+        'netatalk':        Netatalk,
+        'ngircd':          Ngircd,
+        'ruby-enterprise': RubyEnterprise,
+    }
+        
     def main(self, *args):
         for path in args:
-            if re.match('dovecot-', path):
-                Dovecot(self, path).main()
-            elif re.match('apcupsd-', path):
-                Apcupsd(self, path).main()
-            elif re.match('ruby-', path):
-                RubyEnterprise(self, path).main()
-            elif re.match('db-', path):
-                BerkeleyDB(self, path).main()
-            elif re.match('netatalk-', path):
-                Netatalk(self, path).main()
-            elif re.match('ngircd-', path):
-                Ngircd(self, path).main()
-            else:
+            found = False
+            for key in self.pkgmap.keys():
+                if re.match(key + '-', path):
+                    self.pkgmap[key](self, path).main()
+                    found = True
+                    break
+            if not found:
                 Package(self, path).main()
 
 PkgBuild().run()
