@@ -708,11 +708,13 @@ class Apcupsd(Package):
     def __init__(self, app, tarball):
         Package.__init__(self, app, tarball)
 
-        self.manifest = ServiceManifest(self.name, self.title,
-                                        'system/ups/apcupsd',
-                                        [ 'filesystem' ],
-                                        [ '/etc/opt/apcupsd/apcupsd.conf' ],
-                                        init_script='/etc/init.d/apcupsd')
+        self.manifest = \
+            ServiceManifest(self.name, self.title,
+                            'system/ups/apcupsd',
+                            [ 'filesystem' ],
+                            [ '/etc/opt/apcupsd/apcupsd.conf' ],
+                            init_script='/etc/init.d/apcupsd')
+
     def configure(self):
         self.app.shell('./configure', '--prefix=/usr', '--sysconfdir=/etc',
                        '--enable-usb')
@@ -726,6 +728,7 @@ class Apcupsd(Package):
             for line in open('prototype', 'r'):
                 if not re.search('/etc/rc', line):
                     tmp.write(line)
+
         os.remove('prototype')
         os.rename('prototype_tmp', 'prototype')
 
@@ -737,7 +740,8 @@ class BerkeleyDB(Package):
 
     def configure(self):
         os.chdir('build_unix')
-        self.app.shell('../dist/configure', '--prefix=/usr', '--sysconfdir=/etc')
+        self.app.shell('../dist/configure',
+                       '--prefix=/usr', '--sysconfdir=/etc')
 
 ##############################################################################
 
@@ -745,13 +749,14 @@ class Netatalk(Package):
     def __init__(self, app, tarball):
         Package.__init__(self, app, tarball)
 
-        self.manifest = ServiceManifest(self.name, self.title,
-                                        'network/afp/netatalk',
-                                        [ 'filesystem', 'network' ],
-                                        [ '/etc/netatalk/netatalk.conf',
-                                          '/etc/netatalk/afpd.conf',
-                                          '/etc/netatalk/AppleVolumes.default' ],
-                                        init_script='/etc/init.d/netatalk')
+        self.manifest = \
+            ServiceManifest(self.name, self.title,
+                            'network/afp/netatalk',
+                            [ 'filesystem', 'network' ],
+                            [ '/etc/netatalk/netatalk.conf',
+                              '/etc/netatalk/afpd.conf',
+                              '/etc/netatalk/AppleVolumes.default' ],
+                            init_script='/etc/init.d/netatalk')
 
 ##############################################################################
 
@@ -926,7 +931,14 @@ class Glib(Package):
                        '--disable-dtrace', 'LIBS=-lsocket -lnsl')
 
     def build(self):
-        self.app.shell('make')  # don't use -jN
+        try:
+            self.app.shell('make')  # don't use -jN
+        except:
+            # These tests fail to build due to a syntax error found in de.po,
+            # probably due to an ancient version of gettext in OpenIndiana(?)
+            self.app.shell('perl', '-i', '-pe', 's/ tests$//;', 'gio/Makefile')
+
+            self.app.shell('make')  # don't use -jN
 
 ##############################################################################
 ##############################################################################
