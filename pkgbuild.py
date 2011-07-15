@@ -838,14 +838,14 @@ class RubyEnterprise(Package):
  
  #ifdef __BEOS__
 @@ -673,7 +674,7 @@ dump_machine_state(uc)
-             uc->uc_mcontext->__ss.__eip, uc->uc_mcontext->__ss.__cs,
-             uc->uc_mcontext->__ss.__ds, uc->uc_mcontext->__ss.__es,
-             uc->uc_mcontext->__ss.__fs, uc->uc_mcontext->__ss.__gs);
+ 	     uc->uc_mcontext->__ss.__eip, uc->uc_mcontext->__ss.__cs,
+ 	     uc->uc_mcontext->__ss.__ds, uc->uc_mcontext->__ss.__es,
+ 	     uc->uc_mcontext->__ss.__fs, uc->uc_mcontext->__ss.__gs);
 -#elif defined(__i386__)
 +#elif 0 && defined(__i386__)
    sig_printf(dump32, uc->uc_mcontext.gregs[REG_EAX], uc->uc_mcontext.gregs[REG_EBX],
-             uc->uc_mcontext.gregs[REG_ECX], uc->uc_mcontext.gregs[REG_EDX],
-             uc->uc_mcontext.gregs[REG_EDI], uc->uc_mcontext.gregs[REG_ESI],
+ 	     uc->uc_mcontext.gregs[REG_ECX], uc->uc_mcontext.gregs[REG_EDX],
+ 	     uc->uc_mcontext.gregs[REG_EDI], uc->uc_mcontext.gregs[REG_ESI],
 ''')
 
     def build(self):
