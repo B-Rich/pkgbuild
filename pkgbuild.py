@@ -784,6 +784,7 @@ class GooglePerftools(Package):
     def __init__(self, app):
         self.base    = 'google-perftools-1.7'
         self.name    = 'google-perftools'
+        self.title   = 'Google Perftools'
         self.version = '1.7'
 
         Package.__init__(self, app)
@@ -811,6 +812,11 @@ class RubyEnterprise(Package):
             perf.main()
         finally:
             os.chdir(path)
+
+        if not isfile('/usr/lib/libtcmalloc.a'):
+            self.app.log.error('Please install the google-perftools ' +
+                               'that was just built and build ruby again')
+            sys.exit(1)
 
         self.app.shell('./configure', '--prefix=/usr', '--sysconfdir=/etc',
                        '--enable-mbari-api', 'CFLAGS=-O3')
