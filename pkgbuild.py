@@ -855,7 +855,29 @@ class RubyEnterprise(Package):
 ''')
 
     def build(self):
-        self.app.shell('make', 'PRELIBS=-Wl,-rpath,/usr/lib -L/usr/lib -ltcmalloc_minimal')
+        self.app.shell('make', 'PRELIBS=-Wl,-rpath,/usr/lib -L/usr/lib ' +
+                       '-ltcmalloc_minimal')
+
+    def install(self, staging):
+        Package.install(self, staging)
+
+        basedir        = '%s/usr/lib/ruby' % staging
+        libdir         = '%s/1.8' % basedir
+        archname       = 'i386-solaris2.11'
+        extlibdir      = '%s/%s' % (libdir, archname)
+        site_libdir    = '%s/site_ruby/1.8' % basedir
+        site_extlibdir = '%s/%s' % (site_libdir, archname)
+
+        env = os.environ.copy()
+        env['RUBYLIB'] = '%s:%s:%s:%s' % (libdir, extlibdir, site_libdir,
+                                          site_extlibdir)
+        cwd = os.getcwd()
+        try:
+            os.chdir('../rubygems')
+            self.app.shell('%s/usr/bin/ruby' % staging, 'setup.rb',
+                           '--no-ri', '--no-rdoc')
+        finally:
+            os.chdir(cwd)
 
 ##############################################################################
 
