@@ -861,21 +861,35 @@ class RubyEnterprise(Package):
     def install(self, staging):
         Package.install(self, staging)
 
-        basedir        = '%s/usr/lib/ruby' % staging
-        libdir         = '%s/1.8' % basedir
+        basedir        = join(staging, 'usr/lib/ruby')
+        libdir         = join(basedir, '1.8')
         archname       = 'i386-solaris2.11'
-        extlibdir      = '%s/%s' % (libdir, archname)
-        site_libdir    = '%s/site_ruby/1.8' % basedir
-        site_extlibdir = '%s/%s' % (site_libdir, archname)
+        extlibdir      = join(libdir, archname)
+        site_libdir    = join(basedir, 'site_ruby/1.8')
+        site_extlibdir = join(site_libdir, archname)
 
         env = os.environ.copy()
-        env['RUBYLIB'] = '%s:%s:%s:%s' % (libdir, extlibdir, site_libdir,
-                                          site_extlibdir)
+        env['RUBYLIB'] = \
+            '%s:%s:%s:%s' % (libdir, extlibdir, site_libdir, site_extlibdir)
+
         cwd = os.getcwd()
         try:
             os.chdir('../rubygems')
-            self.app.shell('%s/usr/bin/ruby' % staging, 'setup.rb',
+            self.app.shell(join(staging, 'usr/bin/ruby'), 'setup.rb',
                            '--no-ri', '--no-rdoc')
+
+            with open('/tmp/gem', 'w') as fd:
+                fd.write('#!/usr/bin/ruby\n')
+
+                linnum = 0
+                for line in open(join(staging, 'usr/bin/gem'), 'r'):
+                    if linnum > 0:
+                        fd.write(line)
+                    linnum += 1
+
+            os.remove(join(staging, 'usr/bin/gem'))
+            shutil.copyfile('/tmp/gem', join(staging, 'usr/bin/gem'))
+            os.chmod(join(staging, 'usr/bin/gem'), 0755)
         finally:
             os.chdir(cwd)
 
