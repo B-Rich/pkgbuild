@@ -146,7 +146,7 @@ class CommandLineApp(object):
             self.log.setLevel(logging.DEBUG)
         else:
             self.log.setLevel(logging.INFO)
-        
+
         exit_code = 0
         try:
             # We could just call main() and catch a TypeError, but that would
@@ -174,7 +174,7 @@ class CommandLineApp(object):
             exit_code = self.handleMainException()
             if self.options.verbose:
                 raise
-            
+
         if self.force_exit:
             sys.exit(exit_code)
         return exit_code
@@ -268,9 +268,9 @@ class ServiceManifest(object):
 """
 
     config_dependency = """
-    <dependency name="%(name)s-config-file" 
-                grouping="require_all" 
-                restart_on="none" 
+    <dependency name="%(name)s-config-file"
+                grouping="require_all"
+                restart_on="none"
                 type="path">
       <service_fmri value="file://%(path)s" />
     </dependency>
@@ -278,8 +278,8 @@ class ServiceManifest(object):
 
     method_template = """
     <exec_method name="%(name)s"
-                 type="method" 
-                 exec="%(command)s" 
+                 type="method"
+                 exec="%(command)s"
                  timeout_seconds="%(timeout)d">
     </exec_method>
 """
@@ -351,21 +351,23 @@ class ServiceManifest(object):
         elif self.init_script:
             dependencies_xml += \
                 self.method_template % { 'name':    'start',
-                                         'command': '%s start',
+                                         'command': '%s start' % self.init_script,
                                          'timeout': 60 }
             dependencies_xml += \
                 self.method_template % { 'name':    'stop',
-                                         'command': '%s stop',
+                                         'command': '%s stop' % self.init_script,
                                          'timeout': 60 }
             dependencies_xml += \
                 self.method_template % { 'name':    'refresh',
-                                         'command': '%s stop; %s start',
+                                         'command': '%s stop; %s start' % \
+                                         (self.init_script, self.init_script),
                                          'timeout': 60 }
             dependencies_xml += \
                 self.method_template % { 'name':    'restart',
-                                         'command': '%s stop; %s start',
+                                         'command': '%s stop; %s start' % \
+                                         (self.init_script, self.init_script),
                                          'timeout': 60 }
-                
+
         manifest_details['name']         = self.name
         manifest_details['title']        = self.title
         manifest_details['service_name'] = self.service_name
@@ -501,7 +503,7 @@ class Package(object):
         path = join(os.getcwd(), '%s.xml' % self.name)
         if isfile(path):
             self.manifest = path
-            
+
     def maybe_call(self, name, *args, **kwargs):
         try: method = getattr(self, name)
         except AttributeError: pass
@@ -568,7 +570,7 @@ class Package(object):
 
     def package(self):
         staging = join(TMPDIR, 'pkg-staging')
-        
+
         # Clear out the staging area, since we're going to start populating it
 
         if isdir(staging):
@@ -594,7 +596,7 @@ class Package(object):
                                   basename(self.manifest))
             prototype.preremove('svcadm disable %s' % self.name)
             prototype.postremove('svccfg delete %s' % self.name)
-        
+
         # Install the software into the staging area.  When the software was
         # configured, make sure that --prefix=/usr (or something reasonable),
         # and set --sysconfdir if necessary (if you want to make sure config
@@ -631,12 +633,12 @@ class Package(object):
         prototype.close()
         self.maybe_call('edit_prototype', prototype, staging)
         prototype = None
-        
+
         # Create the pkginfo description file.  It's spartan.
 
         pkginfo = PkgInfoFile(self.name, self.title, self.version)
         pkginfo.close()
-        
+
         # Make the package, then move it to the current directory with a
         # versioned pathname.
 
@@ -841,17 +843,17 @@ class RubyEnterprise(Package):
  #include <signal.h>
 +#include <ucontext.h>
  #include <stdio.h>
- 
+
  #ifdef __BEOS__
 @@ -673,7 +674,7 @@ dump_machine_state(uc)
- 	     uc->uc_mcontext->__ss.__eip, uc->uc_mcontext->__ss.__cs,
- 	     uc->uc_mcontext->__ss.__ds, uc->uc_mcontext->__ss.__es,
- 	     uc->uc_mcontext->__ss.__fs, uc->uc_mcontext->__ss.__gs);
+             uc->uc_mcontext->__ss.__eip, uc->uc_mcontext->__ss.__cs,
+             uc->uc_mcontext->__ss.__ds, uc->uc_mcontext->__ss.__es,
+             uc->uc_mcontext->__ss.__fs, uc->uc_mcontext->__ss.__gs);
 -#elif defined(__i386__)
 +#elif 0 && defined(__i386__)
    sig_printf(dump32, uc->uc_mcontext.gregs[REG_EAX], uc->uc_mcontext.gregs[REG_EBX],
- 	     uc->uc_mcontext.gregs[REG_ECX], uc->uc_mcontext.gregs[REG_EDX],
- 	     uc->uc_mcontext.gregs[REG_EDI], uc->uc_mcontext.gregs[REG_ESI],
+             uc->uc_mcontext.gregs[REG_ECX], uc->uc_mcontext.gregs[REG_EDX],
+             uc->uc_mcontext.gregs[REG_EDI], uc->uc_mcontext.gregs[REG_ESI],
 ''')
 
     def build(self):
@@ -996,7 +998,7 @@ class PkgBuild(CommandLineApp):
         'ngircd':          Ngircd,
         'ruby-enterprise': RubyEnterprise,
     }
-        
+
     def main(self, *args):
         for path in args:
             found = False
