@@ -897,6 +897,121 @@ class RubyEnterprise(Package):
 
 ##############################################################################
 
+class GVPE(Package):
+    def __init__(self, app, tarball):
+        self.title = 'GVPE: GNU Virtual Private Ethernet'
+
+        Package.__init__(self, app, tarball)
+
+        self.manifest = ServiceManifest(self.name, self.title,
+                                        'network/vpn/gvpe',
+                                        [ 'filesystem', 'network' ],
+                                        [ '/etc/gvpe/gvpe.conf' ])
+
+        self.manifest.set_start_command('/usr/sbin/gvpe -l info nodename')
+        self.manifest.set_stop_command('/usr/bin/pkill gvpe')
+
+    def build(self):
+        with self.app.mkwriter('patch', '-p1') as patch:
+            patch.write('''
+--- a/config.h
++++ b/config.h
+@@ -204,7 +204,7 @@
+ #define HAVE_PORT_CREATE 1
+
+ /* Define to 1 if you have the <port.h> header file. */
+-#define HAVE_PORT_H 1
++/*#define HAVE_PORT_H 1*/
+
+ /* Define to 1 if you have the `putenv' function. */
+ #define HAVE_PUTENV 1
+--- a/src/ether_emu.C
++++ b/src/ether_emu.C
+@@ -37,9 +37,9 @@
+
+ extern struct vpn network;
+
+-struct ether_emu : map<u32, int>
++struct ether_emu : std::map<u32, int>
+ {
+-  typedef map<u32, int> ipv4map;
++  typedef std::map<u32, int> ipv4map;
+   ipv4map ipv4;
+
+   bool tun_to_tap (tap_packet *pkt);
+--- a/src/tincd/solaris/device.c
++++ b/src/tincd/solaris/device.c
+@@ -21,7 +21,7 @@
+ */
+
+
+-#include "system.h"
++/*#include "system.h"*/
+
+ #include <sys/stropts.h>
+ #include <sys/sockio.h>
+--- a/src/vpn_tcp.C
++++ b/src/vpn_tcp.C
+@@ -49,10 +49,10 @@
+ #include <unistd.h>
+ #include <fcntl.h>
+
+-#include <map>
+-
+ #include "netcompat.h"
+
++#include <map>
++
+ #include "vpn.h"
+
+ #if ENABLE_HTTP_PROXY
+@@ -69,7 +69,7 @@ struct lt_sockinfo
+   }
+ };
+
+-struct tcp_si_map : public map<const sockinfo *, tcp_connection *, lt_sockinfo>
++struct tcp_si_map : public std::map<const sockinfo *, tcp_connection *, lt_sockinfo>
+ {
+   inline void cleaner_cb (ev::timer &w, int revents); ev::timer cleaner;
+
+''')
+        Package.build(self)
+
+    def install(self, staging):
+        Package.install(self, staging)
+
+        etcdir = join(staging, 'etc/gvpe')
+        if not isdir(etcdir):
+            os.makedirs(etcdir)
+
+        with open(join(etcdir, 'gvpe.conf'), 'w') as fd:
+            fd.write('''udp-port = 50000               # the external port to listen on (configure your firewall)
+mtu = 1400                     # minimum MTU of all outgoing interfaces on all hosts
+ifname = vpn0                  # the local network device name
+
+node = first                   # just a nickname
+hostname = first.example.net   # the DNS name or IP address of the host
+
+node = second
+hostname = 133.55.82.9
+
+node = third
+hostname = third.example.net
+''')
+
+        with open(join(etcdir, 'if-up'), 'w') as fd:
+            fd.write('''#!/bin/sh
+ip link set $IFNAME address $MAC mtu $MTU up
+[ $NODENAME = first  ] && ip addr add 10.0.1.1 dev $IFNAME
+[ $NODENAME = second ] && ip addr add 10.0.2.1 dev $IFNAME
+[ $NODENAME = third  ] && ip addr add 10.0.3.1 dev $IFNAME
+ip route add 10.0.0.0/16 dev $IFNAME
+''')
+
+        os.chmod(join(etcdir, 'if-up'), 0755)
+
+##############################################################################
+
 class Dovecot(Package):
     def __init__(self, app, tarball):
         self.title = 'Dovecot: Secure IMAP server'
@@ -997,6 +1112,7 @@ class PkgBuild(CommandLineApp):
         'netatalk':        Netatalk,
         'ngircd':          Ngircd,
         'ruby-enterprise': RubyEnterprise,
+        'gvpe':            GVPE,
     }
 
     def main(self, *args):
