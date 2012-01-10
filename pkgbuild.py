@@ -833,8 +833,9 @@ class RubyEnterprise(Package):
         os.remove('Makefile')
         os.rename('Makefile_tmp', 'Makefile')
 
-        with self.app.mkwriter('patch', '-p2') as patch:
-            patch.write('''
+        try:
+            with self.app.mkwriter('patch', '-p2') as patch:
+                patch.write('''
 --- a/source/signal.c
 +++ b/source/signal.c
 @@ -16,6 +16,7 @@
@@ -855,6 +856,8 @@ class RubyEnterprise(Package):
              uc->uc_mcontext.gregs[REG_ECX], uc->uc_mcontext.gregs[REG_EDX],
              uc->uc_mcontext.gregs[REG_EDI], uc->uc_mcontext.gregs[REG_ESI],
 ''')
+        except:
+            pass
 
     def build(self):
         self.app.shell('make', 'PRELIBS=-Wl,-rpath,/usr/lib -L/usr/lib ' +
@@ -878,7 +881,7 @@ class RubyEnterprise(Package):
         try:
             os.chdir('../rubygems')
             self.app.shell(join(staging, 'usr/bin/ruby'), 'setup.rb',
-                           '--no-ri', '--no-rdoc')
+                           '--no-ri', '--no-rdoc', env=env)
 
             with open('/tmp/gem', 'w') as fd:
                 fd.write('#!/usr/bin/ruby\n')
@@ -1012,6 +1015,36 @@ ip route add 10.0.0.0/16 dev $IFNAME
 
 ##############################################################################
 
+class OpenVPN(Package):
+    def __init__(self, app, tarball):
+        self.title = 'OpenVPN: Virtual Private Network'
+
+        Package.__init__(self, app, tarball)
+
+        self.manifest = ServiceManifest(self.name, self.title,
+                                        'network/vpn/openvpn',
+                                        [ 'filesystem', 'network' ],
+                                        [ '/etc/openvpn/server.conf' ])
+
+        self.manifest.set_start_command('/usr/sbin/openvpn --daemon --writepid /var/run/openvpn/server.pid --config server.conf --cd /etc/openvpn --script-security 2')
+        self.manifest.set_stop_command('/usr/bin/pkill openvpn')
+
+    def install(self, staging):
+        Package.install(self, staging)
+
+        etcdir = join(staging, 'etc/openvpn')
+        if not isdir(etcdir):
+            os.makedirs(etcdir)
+
+        shutil.copy(join('sample-config-files', 'server.conf'), etcdir)
+
+        for entry in os.listdir(join('easy-rsa', '2.0')):
+            shutil.copy(join('easy-rsa', '2.0', entry), etcdir)
+
+        os.makedirs(join(etcdir, 'keys'))
+
+##############################################################################
+
 class Dovecot(Package):
     def __init__(self, app, tarball):
         self.title = 'Dovecot: Secure IMAP server'
@@ -1112,6 +1145,7 @@ class PkgBuild(CommandLineApp):
         'netatalk':        Netatalk,
         'ngircd':          Ngircd,
         'ruby-enterprise': RubyEnterprise,
+        'openvpn':         OpenVPN,
         'gvpe':            GVPE,
     }
 
