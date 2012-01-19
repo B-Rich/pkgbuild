@@ -41,8 +41,10 @@ import time
 
 from os.path import *
 
-TMPDIR  = '/tmp'
-INSTALL = '/usr/bin/ginstall'
+TMPDIR   = '/tmp'
+INSTALL  = '/usr/bin/ginstall'
+archname = 'i386-solaris2.11'
+
 os.environ['PATH'] = '/usr/gnu/bin:' + os.environ['PATH']
 
 make_opts = ('-j8',)
@@ -483,7 +485,7 @@ class Package(object):
         self.app = app
 
         if tarball:
-            match = re.match('(([^0-9]+?)-([-0-9_.]+))\.tar\.(gz|bz2|xz)+$', tarball)
+            match = re.match('(([^0-9]+?)-([-0-9_.pba]+))\.tar\.(gz|bz2|xz)+$', tarball)
             if not match:
                 raise Exception("Cannot parse tarball name: " + tarball)
 
@@ -869,7 +871,6 @@ class RubyEnterprise(Package):
 
         basedir        = join(staging, 'usr/lib/ruby')
         libdir         = join(basedir, '1.8')
-        archname       = 'i386-solaris2.11'
         extlibdir      = join(libdir, archname)
         site_libdir    = join(basedir, 'site_ruby/1.8')
         site_extlibdir = join(site_libdir, archname)
@@ -898,6 +899,48 @@ class RubyEnterprise(Package):
             os.chmod(join(staging, 'usr/bin/gem18'), 0755)
         finally:
             os.chdir(cwd)
+
+##############################################################################
+
+class Ruby(Package):
+    def __init__(self, app, tarball):
+        Package.__init__(self, app, tarball)
+
+    def configure(self):
+        Package.configure(self)
+
+        with open('/tmp/config.h', 'w') as fd:
+            for line in open('.ext/include/%s/ruby/config.h' % archname, 'r'):
+                if 'HAVE_DL_ITERATE_PHDR' not in line:
+                    fd.write(line)
+
+        os.remove('.ext/include/%s/ruby/config.h' % archname)
+        shutil.copyfile('/tmp/config.h',
+                        '.ext/include/%s/ruby/config.h' % archname)
+
+##############################################################################
+
+class Augeas(Package):
+    def __init__(self, app, tarball):
+        Package.__init__(self, app, tarball)
+
+    def configure(self):
+        Package.configure(self)
+
+        with self.app.mkwriter('patch', '-p1') as patch:
+            patch.write('''
+--- a/src/regexp.c
++++ b/src/regexp.c
+@@ -50,7 +50,7 @@ char *regexp_escape(const struct regexp *r) {
+     ret = fa_restrict_alphabet(r->pattern->str, strlen(r->pattern->str),
+                                &nre, &nre_len, 2, 1);
+     if (ret == 0) {
+-        pat = escape(nre, nre_len);
++        pat = escape(nre, nre_len, RX_ESCAPES);
+         free(nre);
+     }
+ #endif
+''')
 
 ##############################################################################
 
@@ -1140,20 +1183,22 @@ class Glib(Package):
 class PkgBuild(CommandLineApp):
     pkgmap = {
         'apcupsd':         Apcupsd,
+        'augeas':          Augeas,
         'db':              BerkeleyDB,
         'dovecot':         Dovecot,
         'glib':            Glib,
+        'gvpe':            GVPE,
         'netatalk':        Netatalk,
         'ngircd':          Ngircd,
-        'ruby-enterprise': RubyEnterprise,
         'openvpn':         OpenVPN,
-        'gvpe':            GVPE,
+        'ruby':            Ruby,
+        'ruby-enterprise': RubyEnterprise,
     }
 
     def main(self, *args):
         for path in args:
             found = False
-            for key in self.pkgmap.keys():
+            for key in reversed(sorted(self.pkgmap.keys())):
                 if re.match(key + '-', path):
                     self.pkgmap[key](self, path).main()
                     found = True
