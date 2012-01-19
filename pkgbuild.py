@@ -821,7 +821,8 @@ class RubyEnterprise(Package):
             sys.exit(1)
 
         self.app.shell('./configure', '--prefix=/usr', '--sysconfdir=/etc',
-                       '--enable-mbari-api', 'CFLAGS=-O3')
+                       '--enable-mbari-api', '--program-suffix=18',
+                       'CFLAGS=-O3')
 
         with open('Makefile_tmp', 'w') as tmp:
             for line in open('Makefile', 'r'):
@@ -880,21 +881,21 @@ class RubyEnterprise(Package):
         cwd = os.getcwd()
         try:
             os.chdir('../rubygems')
-            self.app.shell(join(staging, 'usr/bin/ruby'), 'setup.rb',
+            self.app.shell(join(staging, 'usr/bin/ruby18'), 'setup.rb',
                            '--no-ri', '--no-rdoc', env=env)
 
-            with open('/tmp/gem', 'w') as fd:
-                fd.write('#!/usr/bin/ruby\n')
+            with open('/tmp/gem18', 'w') as fd:
+                fd.write('#!/usr/bin/ruby18\n')
 
                 linnum = 0
-                for line in open(join(staging, 'usr/bin/gem'), 'r'):
+                for line in open(join(staging, 'usr/bin/gem18'), 'r'):
                     if linnum > 0:
                         fd.write(line)
                     linnum += 1
 
-            os.remove(join(staging, 'usr/bin/gem'))
-            shutil.copyfile('/tmp/gem', join(staging, 'usr/bin/gem'))
-            os.chmod(join(staging, 'usr/bin/gem'), 0755)
+            os.remove(join(staging, 'usr/bin/gem18'))
+            shutil.copyfile('/tmp/gem18', join(staging, 'usr/bin/gem18'))
+            os.chmod(join(staging, 'usr/bin/gem18'), 0755)
         finally:
             os.chdir(cwd)
 
