@@ -776,7 +776,7 @@ class Ngircd(Package):
                                         [ '/etc/ngircd.conf' ])
 
         self.manifest.set_start_command('/usr/sbin/ngircd')
-        self.manifest.set_stop_command('/usr/bin/pkill ngircd')
+        self.manifest.set_stop_command(':kill -TERM')
 
     def configure(self):
         self.app.shell('./configure', '--prefix=/usr', '--sysconfdir=/etc',
@@ -956,7 +956,7 @@ class GVPE(Package):
                                         [ '/etc/gvpe/gvpe.conf' ])
 
         self.manifest.set_start_command('/usr/sbin/gvpe -l info nodename')
-        self.manifest.set_stop_command('/usr/bin/pkill gvpe')
+        self.manifest.set_stop_command(':kill -TERM')
 
     def build(self):
         with self.app.mkwriter('patch', '-p1') as patch:
@@ -1071,7 +1071,7 @@ class OpenVPN(Package):
                                         [ '/etc/openvpn/server.conf' ])
 
         self.manifest.set_start_command('/usr/sbin/openvpn --daemon --writepid /var/run/openvpn/server.pid --config server.conf --cd /etc/openvpn --script-security 2')
-        self.manifest.set_stop_command('/usr/bin/pkill openvpn')
+        self.manifest.set_stop_command(':kill -TERM')
 
     def install(self, staging):
         Package.install(self, staging)
@@ -1177,6 +1177,56 @@ class Glib(Package):
             self.app.shell('make')  # don't use -jN
 
 ##############################################################################
+
+class Privoxy(Package):
+    def __init__(self, app, tarball):
+        Package.__init__(self, app, tarball)
+
+        self.manifest = ServiceManifest(self.name, self.title,
+                                        'network/privoxy',
+                                        [ 'filesystem', 'network' ],
+                                        [ '/etc/privoxy/config' ])
+
+        self.manifest.set_start_command('/usr/sbin/privoxy --pidfile /var/log/privoxy/privoxy.pid --user webservd.webservd /etc/privoxy/config')
+        self.manifest.set_stop_command(':kill -TERM')
+
+    def configure(self):
+        self.app.shell('autoconf')
+        self.app.shell('autoheader')
+        self.app.shell('./configure', '--prefix=/usr', '--sysconfdir=/etc/privoxy',
+                       '--localstatedir=/var',
+                       'CFLAGS=-O3 -pipe -fomit-frame-pointer -funroll-loops -ffast-math -fno-exceptions',
+                       '--enable-compression', '--with-user=webservd',
+                       '--with-group=webservd')
+
+##############################################################################
+
+class Squid(Package):
+    def __init__(self, app, tarball):
+        Package.__init__(self, app, tarball)
+
+        self.manifest = ServiceManifest(self.name, self.title,
+                                        'network/squid',
+                                        [ 'filesystem', 'network' ],
+                                        [ '/etc/squid/squid.conf' ])
+
+        self.manifest.set_start_command('/usr/squid/sbin/squid')
+        self.manifest.set_stop_command('/usr/bin/pkill squid')
+
+    def configure(self):
+        self.app.shell('./configure', '--prefix=/usr/squid', '--sysconfdir=/etc/squid',
+                       '--localstatedir=/var/squid',
+                       'CFLAGS=-DNUMTHREADS=60 -O3 -pipe -fomit-frame-pointer -funroll-loops -ffast-math -fno-exceptions',
+                       '--enable-async-io',
+                       '--enable-useragent-log',
+                       '--enable-storeio=aufs,ufs',
+                       '--enable-removal-policies=heap,lru',
+                       '--with-maxfd=16384',
+                       '--enable-poll',
+                       '--disable-ident-lookups',
+                       '--with-default-user=webservd')
+
+##############################################################################
 ##############################################################################
 ##############################################################################
 
@@ -1191,8 +1241,10 @@ class PkgBuild(CommandLineApp):
         'netatalk':        Netatalk,
         'ngircd':          Ngircd,
         'openvpn':         OpenVPN,
+        'privoxy':         Privoxy,
         'ruby':            Ruby,
         'ruby-enterprise': RubyEnterprise,
+        'squid':           Squid,
     }
 
     def main(self, *args):
