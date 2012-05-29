@@ -749,6 +749,15 @@ class BerkeleyDB(Package):
 
 ##############################################################################
 
+class CMake(Package):
+    def __init__(self, app, tarball):
+        Package.__init__(self, app, tarball)
+
+    def configure(self):
+        self.app.shell('./configure', '--prefix=/usr')
+
+##############################################################################
+
 class Netatalk(Package):
     def __init__(self, app, tarball):
         Package.__init__(self, app, tarball)
@@ -1234,6 +1243,7 @@ class PkgBuild(CommandLineApp):
     pkgmap = {
         'apcupsd':         Apcupsd,
         'augeas':          Augeas,
+        'cmake':           CMake,
         'db':              BerkeleyDB,
         'dovecot':         Dovecot,
         'glib':            Glib,
